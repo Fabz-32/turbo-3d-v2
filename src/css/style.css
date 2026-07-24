@@ -1,0 +1,191 @@
+/* ========== Turbo 3D — Estilos ========== */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  background: #0c0d14;
+  font-family: 'Courier New', monospace;
+  color: #eef0ff;
+  user-select: none;
+}
+
+#ui {
+  position: fixed; top: 12px; left: 12px;
+  font-size: 13px; line-height: 1.6;
+  background: #171a2bcc;
+  padding: 10px 14px;
+  border: 1px solid #333a5c;
+  border-radius: 6px;
+  z-index: 100;
+}
+#ui b { color: #f4c95d; }
+
+#stars {
+  letter-spacing: 3px;
+  color: #e6595f;
+  font-size: 16px;
+}
+
+#speedBarContainer {
+  width: 120px; height: 6px;
+  background: #1a1c2b;
+  border-radius: 3px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+#speedBar {
+  width: 0%; height: 100%;
+  background: linear-gradient(90deg, #f4c95d, #e6595f);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+#minimap {
+  position: fixed; top: 12px; right: 12px;
+  border: 2px solid #333a5c;
+  border-radius: 6px;
+  background: #0c0d14cc;
+  z-index: 100;
+}
+
+#help {
+  position: fixed; bottom: 12px; left: 12px;
+  font-size: 12px; color: #8a8fb8;
+  background: #171a2bcc;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #333a5c;
+  z-index: 100;
+}
+#help kbd {
+  background: #0c0d14;
+  border: 1px solid #333a5c;
+  border-radius: 3px;
+  padding: 1px 6px;
+  color: #eef0ff;
+  font-family: inherit;
+}
+
+#overlay {
+  position: fixed; inset: 0;
+  background: #0c0d14ee;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  z-index: 200;
+}
+#overlay.show { display: flex; }
+
+#overlay h2 {
+  color: #f4c95d;
+  font-size: 28px;
+  margin: 0;
+  letter-spacing: 2px;
+}
+#overlay .subtitle {
+  color: #8a8fb8;
+  font-size: 14px;
+  text-align: center;
+}
+#overlay .score-display {
+  font-size: 18px;
+  color: #f4c95d;
+  margin: 8px 0;
+}
+
+#garage {
+  max-width: 520px;
+  width: 90%;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+#garage::-webkit-scrollbar { width: 6px; }
+#garage::-webkit-scrollbar-track { background: #0c0d14; }
+#garage::-webkit-scrollbar-thumb { background: #333a5c; border-radius: 3px; }
+
+.car-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  border: 1px solid #333a5c;
+  border-radius: 6px;
+  margin: 4px 0;
+  background: #171a2b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.car-row:hover { border-color: #4a4d5e; background: #1e2235; }
+.car-row.sel { border-color: #f4c95d; background: #22263d; }
+.car-row .car-info { display: flex; align-items: center; gap: 8px; }
+.car-row .car-stats { font-size: 10px; color: #8a8fb8; margin-top: 2px; }
+
+.rarity {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+}
+.r-comun { background: #4a4d5e; color: #dfe1ee; }
+.r-raro { background: #2f6fb0; color: #eef8ff; }
+.r-epico { background: #8a4bd1; color: #f2eaff; }
+.r-legendario { background: #c98f2a; color: #1a1200; }
+
+#btnRow { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+button {
+  background: #22263d;
+  border: 1px solid #333a5c;
+  color: #eef0ff;
+  font-family: inherit;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+button:hover { border-color: #f4c95d; background: #2a2e45; }
+button:disabled { opacity: 0.5; cursor: not-allowed; border-color: #333a5c; }
+button.primary {
+  background: #f4c95d;
+  color: #1a1200;
+  border-color: #f4c95d;
+  font-weight: bold;
+}
+button.primary:hover { background: #ffd76e; }
+
+#gameOverStats { text-align: center; margin: 10px 0; }
+#gameOverStats .stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 4px 0;
+  border-bottom: 1px solid #333a5c;
+}
+#gameOverStats .stat-label { color: #8a8fb8; }
+#gameOverStats .stat-value { color: #f4c95d; font-weight: bold; }
+
+#leaderboard, #chestPanel {
+  display: none;
+  max-width: 400px;
+  width: 90%;
+}
+#leaderboard.show, #chestPanel.show { display: block; }
+
+.leaderboard-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 1px solid #333a5c;
+  font-size: 13px;
+}
+.leaderboard-row.top3 { color: #f4c95d; }
+
+@media (max-width: 600px) {
+  #ui { font-size: 11px; padding: 6px 10px; }
+  #help { font-size: 10px; padding: 6px 8px; }
+  #overlay h2 { font-size: 22px; }
+}

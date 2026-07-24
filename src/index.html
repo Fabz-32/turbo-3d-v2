@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turbo 3D — v0.2.0</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="ui">
+  Velocidad: <b id="spd">0</b> km/h
+  <div id="speedBarContainer"><div id="speedBar"></div></div>
+  💰 <b id="money">0</b> &nbsp; Total: <b id="total">0</b><br>
+  <span id="stars"></span>
+</div>
+
+<canvas id="minimap" width="150" height="150"></canvas>
+
+<div id="help">
+  <kbd>W</kbd> acelerar &nbsp; <kbd>S</kbd> reversa &nbsp; <kbd>A D</kbd> girar &nbsp; <kbd>SHIFT</kbd> drift
+</div>
+
+<div id="overlay" class="show">
+  <h2 id="overlayTitle">TURBO 3D</h2>
+  <p class="subtitle">Arcade de manejo + evasión policial</p>
+
+  <div id="garage"></div>
+  <div id="leaderboard" style="display:none;"></div>
+  <div id="chestPanel" style="display:none;"></div>
+  <div id="gameOverStats" style="display:none;"></div>
+
+  <div id="btnRow">
+    <button id="btnPlay" class="primary">▶ Jugar</button>
+    <button id="btnChests">🎁 Cofres</button>
+    <button id="btnLeaderboard">🏆 Ranking</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>
