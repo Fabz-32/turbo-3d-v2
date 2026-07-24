@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turbo 3D — v0.2.1</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0c0d14; font-family: 'Courier New', monospace; color: #eef0ff; user-select: none; }
+  #ui { position: fixed; top: 12px; left: 12px; font-size: 13px; line-height: 1.6; background: #171a2bcc; padding: 10px 14px; border: 1px solid #333a5c; border-radius: 6px; z-index: 100; }
+  #ui b { color: #f4c95d; }
+  #stars { letter-spacing: 3px; color: #e6595f; font-size: 16px; }
+  #speedBarContainer { width: 120px; height: 6px; background: #1a1c2b; border-radius: 3px; margin-top: 4px; overflow: hidden; }
+  #speedBar { width: 0%; height: 100%; background: linear-gradient(90deg, #f4c95d, #e6595f); border-radius: 3px; transition: width 0.1s linear; }
+  #minimap { position: fixed; top: 12px; right: 12px; border: 2px solid #333a5c; border-radius: 6px; background: #0c0d14cc; z-index: 100; }
+  #help { position: fixed; bottom: 12px; left: 12px; font-size: 12px; color: #8a8fb8; background: #171a2bcc; padding: 8px 12px; border-radius: 6px; border: 1px solid #333a5c; z-index: 100; }
+  #help kbd { background: #0c0d14; border: 1px solid #333a5c; border-radius: 3px; padding: 1px 6px; color: #eef0ff; font-family: inherit; }
+  #overlay { position: fixed; inset: 0; background: #0c0d14ee; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 200; overflow-y: auto; padding: 20px; }
+  #overlay.show { display: flex; }
+  #overlay h2 { color: #f4c95d; font-size: 28px; margin: 0; letter-spacing: 2px; }
+  #overlay .subtitle { color: #8a8fb8; font-size: 14px; text-align: center; }
+  #overlay .score-display { font-size: 18px; color: #f4c95d; margin: 8px 0; }
+  #garage { max-width: 520px; width: 90%; max-height: 45vh; overflow-y: auto; }
+  #garage::-webkit-scrollbar { width: 6px; }
+  #garage::-webkit-scrollbar-track { background: #0c0d14; }
+  #garage::-webkit-scrollbar-thumb { background: #333a5c; border-radius: 3px; }
+  .car-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border: 1px solid #333a5c; border-radius: 6px; margin: 4px 0; background: #171a2b; cursor: pointer; transition: all 0.15s ease; }
+  .car-row:hover { border-color: #4a4d5e; background: #1e2235; }
+  .car-row.sel { border-color: #f4c95d; background: #22263d; }
+  .car-row .car-info { display: flex; align-items: center; gap: 8px; }
+  .car-row .car-stats { font-size: 10px; color: #8a8fb8; margin-top: 2px; }
+  .rarity { font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+  .r-comun { background: #4a4d5e; color: #dfe1ee; }
+  .r-raro { background: #2f6fb0; color: #eef8ff; }
+  .r-epico { background: #8a4bd1; color: #f2eaff; }
+  .r-legendario { background: #c98f2a; color: #1a1200; }
+  #btnRow { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  button { background: #22263d; border: 1px solid #333a5c; color: #eef0ff; font-family: inherit; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.15s ease; }
+  button:hover { border-color: #f4c95d; background: #2a2e45; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; border-color: #333a5c; }
+  button.primary { background: #f4c95d; color: #1a1200; border-color: #f4c95d; font-weight: bold; }
+  button.primary:hover { background: #ffd76e; }
+  #gameOverStats { text-align: center; margin: 10px 0; display: none; }
+  #gameOverStats.show { display: block; }
+  #gameOverStats .stat-row { display: flex; justify-content: space-between; gap: 30px; padding: 4px 0; border-bottom: 1px solid #333a5c; }
+  #gameOverStats .stat-label { color: #8a8fb8; }
+  #gameOverStats .stat-value { color: #f4c95d; font-weight: bold; }
+  #leaderboard, #chestPanel { display: none; max-width: 400px; width: 90%; }
+  #leaderboard.show, #chestPanel.show { display: block; }
+  .leaderboard-row { display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #333a5c; font-size: 13px; }
+  .leaderboard-row.top3 { color: #f4c95d; }
+  @media (max-width: 600px) { #ui { font-size: 11px; padding: 6px 10px; } #help { font-size: 10px; padding: 6px 8px; } #overlay h2 { font-size: 22px; } }
+</style>
+</head>
+<body>
+
+<div id="ui">
+  Velocidad: <b id="spd">0</b> km/h
+  <div id="speedBarContainer"><div id="speedBar"></div></div>
+  💰 <b id="money">0</b> &nbsp; Total: <b id="total">0</b><br>
+  <span id="stars"></span>
+</div>
+
+<canvas id="minimap" width="150" height="150"></canvas>
+
+<div id="help">
+  <kbd>W</kbd> acelerar &nbsp; <kbd>S</kbd> reversa &nbsp; <kbd>A D</kbd> girar &nbsp; <kbd>SHIFT</kbd> drift
+</div>
+
+<div id="overlay" class="show">
+  <h2 id="overlayTitle">TURBO 3D</h2>
+  <p class="subtitle">Arcade de manejo + evasión policial</p>
+
+  <div id="garage"></div>
+  <div id="leaderboard"></div>
+  <div id="chestPanel"></div>
+  <div id="gameOverStats"></div>
+
+  <div id="btnRow">
+    <button id="btnPlay" class="primary">▶ Jugar</button>
+    <button id="btnChests">🎁 Cofres</button>
+    <button id="btnLeaderboard">🏆 Ranking</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============================================
+// TURBO 3D — v0.2.1 (Monolito funcional)
+// Todo en un solo archivo para GitHub Pages
+// ============================================
+
+// ---------- CONSTANTES ----------
+const SAVE_KEY = 'turbo3d_save_v2';
+const WORLD = 460;
+const MAX_POLICE = 5;
+
+const CARS = [
+  { name: 'Compacto',       rarity: 'comun',      price: 0,    color: 0xf4c95d, speed: 1.00, handling: 1.00, shape: 'compacto' },
+  { name: 'Pickup',         rarity: 'comun',      price: 300,  color: 0x8a8f9a, speed: 0.95, handling: 1.10, shape: 'pickup' },
+  { name: 'Deportivo',      rarity: 'raro',       price: 900,  color: 0x2f6fb0, speed: 1.15, handling: 1.05, shape: 'deportivo' },
+  { name: 'Muscle Car',     rarity: 'raro',       price: 1600, color: 0xe6595f, speed: 1.25, handling: 0.95, shape: 'muscle' },
+  { name: 'Superdeportivo', rarity: 'epico',      price: 3500, color: 0x8a4bd1, speed: 1.40, handling: 1.10, shape: 'super' },
+  { name: 'Prototipo X',    rarity: 'legendario', price: 8000, color: 0xc98f2a, speed: 1.60, handling: 1.25, shape: 'proto' },
+];
+
+const RARITY_LABEL = { comun: 'Común', raro: 'Raro', epico: 'Épico', legendario: 'Legendario' };
+
+const CAMERA_CFG = { groundDist: 22, elevationDeg: 32, cornerDeg: 35, lerpFactor: 0.18 };
+const PHYSICS = { accelForward: 38, accelReverse: 22, maxSpeedBase: 60, minSpeed: -22, friction: 0.99, turnRateBase: 1.9, driftRate: 0.6, driftLerpFast: 4.0, driftLerpSlow: 2.0 };
+const POLICE_CFG = { speedBase: 16, speedPerStar: 3.5, spawnDistance: 45, catchDistance: 3.2, accel: 18, wantedThreshold: 150, wantedDecreaseRate: 1.5, starInterval: 4 };
+const ECONOMY = { moneyPerSpeedUnit: 0.7, minSpeedForMoney: 4 };
+
+const CITY_BUILDINGS = [
+  { x: 90,  z: -30, w: 14, h: 18, d: 14, color: 0xc0b8a8 },
+  { x: 114, z: -28, w: 16, h: 22, d: 12, color: 0xa8b0c0 },
+  { x: 138, z: -32, w: 12, h: 16, d: 16, color: 0xb8a0b0 },
+  { x: 92,  z: -4,  w: 15, h: 20, d: 13, color: 0x9098a8 },
+  { x: 116, z: -2,  w: 13, h: 24, d: 15, color: 0xc0b8a8 },
+  { x: 140, z: -6,  w: 14, h: 19, d: 12, color: 0xa8b0c0 },
+];
+
+const ROADS = [
+  [24, 460, 0, 0], [460, 24, 0, 0],
+  [16, 200, 130, 60], [200, 16, -100, -120],
+  [16, 460, -180, 0], [16, 460, 180, 0],
+  [460, 16, 0, -180], [460, 16, 0, 180],
+  [18, 260, 60, -90], [260, 18, -60, 90],
+];
+
+const LAKE = { x: -140, z: 120, w: 80, h: 80 };
+
+// ---------- GUARDADO ----------
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      return {
+        totalMoney: data.totalMoney || 0, best: data.best || 0,
+        owned: data.owned || [0], active: data.active || 0,
+        gamesPlayed: data.gamesPlayed || 0, chestStreak: data.chestStreak || 0,
+        lastDailyChest: data.lastDailyChest || 0, leaderboard: data.leaderboard || [],
+        ...data
+      };
+    }
+  } catch (e) { console.warn('Error cargando save:', e); }
+  return { totalMoney: 0, best: 0, owned: [0], active: 0, gamesPlayed: 0, chestStreak: 0, lastDailyChest: 0, leaderboard: [] };
+}
+
+function saveGame() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }
+  catch (e) { console.warn('Error guardando:', e); }
+}
+
+let save = loadSave();
+function currentCar() { return CARS[save.active]; }
+
+// ---------- COFRES ----------
+const CHEST_STREAK_TARGET = 3;
+const DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
+
+function canOpenDailyChest() { return Date.now() - save.lastDailyChest >= DAILY_COOLDOWN; }
+function canOpenStreakChest() { return save.chestStreak >= CHEST_STREAK_TARGET; }
+
+function getTimeUntilDaily() {
+  const remaining = DAILY_COOLDOWN - (Date.now() - save.lastDailyChest);
+  if (remaining <= 0) return null;
+  const h = Math.floor(remaining / 3600000);
+  const m = Math.floor((remaining % 3600000) / 60000);
+  return h + 'h ' + m + 'm';
+}
+
+function openChest(type) {
+  const rng = () => Math.random();
+  const rewards = [];
+  const baseMoney = type === 'daily' ? 200 : 100;
+  const variance = type === 'daily' ? 300 : 150;
+  rewards.push({ type: 'money', amount: Math.floor(baseMoney + rng() * variance) });
+  const bonusChance = type === 'daily' ? 0.2 : 0.1;
+  if (rng() < bonusChance) rewards.push({ type: 'money', amount: Math.floor(500 + rng() * 500), bonus: true });
+  if (type === 'daily') save.lastDailyChest = Date.now();
+  else if (type === 'streak') save.chestStreak = 0;
+  rewards.forEach(r => { if (r.type === 'money') save.totalMoney += r.amount; });
+  saveGame();
+  return rewards;
+}
+
+function addToLeaderboard(score, initials) {
+  initials = (initials || 'AAA').toUpperCase().slice(0, 3);
+  save.leaderboard.push({ score, initials, date: new Date().toISOString(), car: CARS[save.active].name });
+  save.leaderboard.sort((a, b) => b.score - a.score);
+  save.leaderboard = save.leaderboard.slice(0, 10);
+  saveGame();
+}
+
+function getLeaderboard() { return save.leaderboard; }
+
+function incrementGamesPlayed() { save.gamesPlayed++; save.chestStreak++; saveGame(); }
+
+// ---------- MODELOS 3D ----------
+function mat(color) { return new THREE.MeshLambertMaterial({ color: color }); }
+
+function addWheels(group, wheelMat, hw, frontZ, backZ, wy, size) {
+  const wheelGeo = new THREE.BoxGeometry(size, size * 1.6, size * 1.6);
+  [[hw, wy, frontZ], [-hw, wy, frontZ], [hw, wy, backZ], [-hw, wy, backZ]].forEach(function(pos) {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.position.set(pos[0], pos[1], pos[2]);
+    group.add(w);
+  });
+}
+
+function buildCar(color, shape) {
+  shape = shape || 'compacto';
+  var g = new THREE.Group();
+  var wheelMat = mat(0x111111);
+
+  if (shape === 'compacto') {
+    var body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.9, 3.6), mat(color));
+    body.position.y = 0.68; g.add(body);
+    var cabin = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.9, 2.2), mat(0x1a1c2a));
+    cabin.position.set(0, 1.5, 0); g.add(cabin);
+    addWheels(g, wheelMat, 1.1, 1.3, -1.3, 0.45, 0.5);
+  } else if (shape === 'pickup') {
+    var cab = new THREE.Mesh(new THREE.BoxGeometry(2.3, 1.1, 2.0), mat(color));
+    cab.position.set(0, 0.85, 0.9); g.add(cab);
+    var cabin = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.9, 1.4), mat(0x1a1c2a));
+    cabin.position.set(0, 1.75, 1.1); g.add(cabin);
+    var bed = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 2.6), mat(color));
+    bed.position.set(0, 0.65, -1.7); g.add(bed);
+    var bedWalls = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 0.2), mat(color));
+    bedWalls.position.set(0, 1.15, -2.9); g.add(bedWalls);
+    addWheels(g, wheelMat, 1.15, 1.2, -1.8, 0.45, 0.55);
+  } else if (shape === 'deportivo') {
+    var body = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.6, 4.2), mat(color));
+    body.position.y = 0.55; g.add(body);
+    var wedge = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.4, 1.2), mat(color));
+    wedge.position.set(0, 0.55, 2.3); g.add(wedge);
+    var cabin = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.55, 1.9), mat(0x1a1c2a));
+    cabin.position.set(0, 1.05, -0.3); g.add(cabin);
+    var spoiler = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.15, 0.35), mat(0x1a1c2a));
+    spoiler.position.set(0, 1.05, -2.15); g.add(spoiler);
+    addWheels(g, wheelMat, 1.1, 1.5, -1.5, 0.4, 0.5);
+  } else if (shape === 'muscle') {
+    var hood = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.75, 2.4), mat(color));
+    hood.position.set(0, 0.65, 1.5); g.add(hood);
+    var body = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.9, 1.8), mat(color));
+    body.position.set(0, 0.7, -0.5); g.add(body);
+    var cabin = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.85, 1.5), mat(0x1a1c2a));
+    cabin.position.set(0, 1.35, 0.3); g.add(cabin);
+    var fastback = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 1.4), mat(0x1a1c2a));
+    fastback.position.set(0, 1.05, -1.2); g.add(fastback);
+    addWheels(g, wheelMat, 1.2, 1.3, -1.4, 0.45, 0.58);
+  } else if (shape === 'super') {
+    var body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 4.0), mat(color));
+    body.position.y = 0.42; g.add(body);
+    var nose = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.35, 1.0), mat(color));
+    nose.position.set(0, 0.4, 2.4); g.add(nose);
+    var cabin = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 1.6), mat(0x1a1c2a));
+    cabin.position.set(0, 0.85, -0.2); g.add(cabin);
+    var spoiler = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.4), mat(0x1a1c2a));
+    spoiler.position.set(0, 1.0, -2.0); g.add(spoiler);
+    var leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.15), mat(0x1a1c2a));
+    leg1.position.set(0.8, 0.85, -2.0); g.add(leg1);
+    var leg2 = leg1.clone(); leg2.position.set(-0.8, 0.85, -2.0); g.add(leg2);
+    addWheels(g, wheelMat, 1.25, 1.5, -1.5, 0.35, 0.55);
+  } else if (shape === 'proto') {
+    var body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.55, 4.2), mat(color));
+    body.position.y = 0.48; g.add(body);
+    var canopy = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 1.6), mat(0x1a1c2a));
+    canopy.position.set(0, 0.95, 0.6); g.add(canopy);
+    var finL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 1.6), mat(color));
+    finL.position.set(1.1, 0.85, -1.2); g.add(finL);
+    var finR = finL.clone(); finR.position.set(-1.1, 0.85, -1.2); g.add(finR);
+    var wing = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.15, 0.5), mat(0x1a1c2a));
+    wing.position.set(0, 1.2, -2.1); g.add(wing);
+    addWheels(g, wheelMat, 1.25, 1.55, -1.55, 0.35, 0.55);
+  } else if (shape === 'policia') {
+    var body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.9, 3.8), mat(color));
+    body.position.y = 0.68; g.add(body);
+    var cabin = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.85, 2.1), mat(0x1a1c2a));
+    cabin.position.set(0, 1.48, 0); g.add(cabin);
+    var lightbar = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.22, 0.5), mat(0x222222));
+    lightbar.position.set(0, 1.95, 0.4); g.add(lightbar);
+    var lightR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.45), mat(0xe6595f));
+    lightR.position.set(0.32, 1.97, 0.4); g.add(lightR);
+    var lightB = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.2, 0.45), mat(0x2244cc));
+    lightB.position.set(-0.32, 1.97, 0.4); g.add(lightB);
+    addWheels(g, wheelMat, 1.1, 1.3, -1.3, 0.45, 0.5);
+  }
+  return g;
+}
+
+var obstacles = [];
+
+function createWorld(scene) {
+  var ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(WORLD, WORLD),
+    new THREE.MeshLambertMaterial({ color: 0x3a6b46 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
+
+  ROADS.forEach(function(r) {
+    var road = new THREE.Mesh(
+      new THREE.PlaneGeometry(r[0], r[1]),
+      new THREE.MeshLambertMaterial({ color: 0x4a4d5e })
+    );
+    road.rotation.x = -Math.PI / 2;
+    road.position.set(r[2], 0.02, r[3]);
+    scene.add(road);
+  });
+
+  var lake = new THREE.Mesh(
+    new THREE.PlaneGeometry(LAKE.w, LAKE.h),
+    new THREE.MeshLambertMaterial({ color: 0x2f6fb0 })
+  );
+  lake.rotation.x = -Math.PI / 2;
+  lake.position.set(LAKE.x, 0.03, LAKE.z);
+  scene.add(lake);
+  obstacles.push({ x: LAKE.x, z: LAKE.z, r: Math.max(LAKE.w, LAKE.h) / 2 + 2, type: 'lake' });
+
+  CITY_BUILDINGS.forEach(function(b) {
+    var mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(b.w, b.h, b.d),
+      new THREE.MeshLambertMaterial({ color: b.color })
+    );
+    mesh.position.set(b.x, b.h / 2, b.z);
+    scene.add(mesh);
+    obstacles.push({ x: b.x, z: b.z, r: Math.max(b.w, b.d) / 2 + 1.2, type: 'building' });
+  });
+
+  var treeColors = [0x2e5a34, 0x3a6b3a, 0x256633];
+  for (var i = 0; i < 14; i++) {
+    var x, z, attempts = 0;
+    do {
+      x = (Math.random() - 0.5) * WORLD * 0.9;
+      z = (Math.random() - 0.5) * WORLD * 0.9;
+      attempts++;
+    } while (attempts < 50 && (
+      Math.abs(x) < 14 || Math.abs(z) < 14 ||
+      Math.hypot(x - LAKE.x, z - LAKE.z) < 50 ||
+      obstacles.some(function(o) { return o.type === 'tree' && Math.hypot(x - o.x, z - o.z) < 15; })
+    ));
+
+    var trunk = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 1), mat(0x5a4030));
+    trunk.position.set(x, 2, z);
+    var leaves = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), mat(treeColors[i % 3]));
+    leaves.position.set(x, 6.5, z);
+    scene.add(trunk); scene.add(leaves);
+    obstacles.push({ x: x, z: z, r: 2.6, type: 'tree' });
+  }
+}
+
+function createPolice(scene, count) {
+  var units = [];
+  for (var i = 0; i < count; i++) {
+    var m = buildCar(0x2244cc, 'policia');
+    m.visible = false;
+    scene.add(m);
+    units.push({ mesh: m, x: 0, z: 0, active: false, speed: 0 });
+  }
+  return units;
+}
+
+// ---------- JUGADOR ----------
+var player = {
+  mesh: null, x: 0, z: 60, drift: 0, speed: 0, money: 0,
+  alive: false, heading: 0, survivalTime: 0, maxSpeedReached: 0
+};
+
+var policeUnits = [];
+var wantedLevel = 0;
+var wantedTimer = 0;
+var keys = {};
+
+function initInput() {
+  window.addEventListener('keydown', function(e) { keys[e.key.toLowerCase()] = true; });
+  window.addEventListener('keyup', function(e) { keys[e.key.toLowerCase()] = false; });
+}
+
+function resetWorldForRun() {
+  player.heading = 0; player.x = 0; player.z = 60;
+  player.drift = 0; player.speed = 0; player.money = 0;
+  player.survivalTime = 0; player.maxSpeedReached = 0;
+  wantedLevel = 0; wantedTimer = 0;
+  policeUnits.forEach(function(p) { p.active = false; p.mesh.visible = false; p.speed = 0; });
+}
+
+function startRun(scene) {
+  if (player.mesh) scene.remove(player.mesh);
+  var car = currentCar();
+  player.mesh = buildCar(car.color, car.shape);
+  scene.add(player.mesh);
+  resetWorldForRun();
+  player.alive = true;
+  incrementGamesPlayed();
+}
+
+function endRun(onEndCallback) {
+  if (!player.alive) return;
+  player.alive = false;
+  var score = Math.floor(player.money);
+  save.totalMoney += score;
+  if (score > save.best) save.best = score;
+  if (score > 0) addToLeaderboard(score, 'PLY');
+  saveGame();
+  if (onEndCallback) onEndCallback({ score: score, survivalTime: player.survivalTime, maxSpeed: player.maxSpeedReached, wantedLevel: wantedLevel });
+}
+
+// ---------- FÍSICA ----------
+function updateWanted(dt) {
+  var kmh = Math.abs(player.speed) * 9;
+  if (kmh > player.maxSpeedReached) player.maxSpeedReached = kmh;
+  if (kmh > POLICE_CFG.wantedThreshold) wantedTimer += dt;
+  else wantedTimer = Math.max(0, wantedTimer - dt * POLICE_CFG.wantedDecreaseRate);
+
+  var newLevel = Math.min(MAX_POLICE, Math.floor(wantedTimer / POLICE_CFG.starInterval));
+  if (newLevel > wantedLevel) {
+    var activeCount = policeUnits.filter(function(p) { return p.active; }).length;
+    if (activeCount < newLevel) {
+      var unit = policeUnits.find(function(p) { return !p.active; });
+      if (unit) {
+        unit.active = true; unit.mesh.visible = true; unit.speed = 0;
+        var ang = Math.random() * Math.PI * 2;
+        unit.x = player.x + Math.sin(ang) * POLICE_CFG.spawnDistance;
+        unit.z = player.z + Math.cos(ang) * POLICE_CFG.spawnDistance;
+        var lim = WORLD / 2 - 10;
+        unit.x = Math.max(-lim, Math.min(lim, unit.x));
+        unit.z = Math.max(-lim, Math.min(lim, unit.z));
+      }
+    }
+  } else if (newLevel < wantedLevel) {
+    var unit = policeUnits.slice().reverse().find(function(p) { return p.active; });
+    if (unit) { unit.active = false; unit.mesh.visible = false; }
+  }
+  wantedLevel = newLevel;
+}
+
+function updatePolice(dt) {
+  var speedBase = POLICE_CFG.speedBase + wantedLevel * POLICE_CFG.speedPerStar;
+  var lim = WORLD / 2 - 4;
+  for (var i = 0; i < policeUnits.length; i++) {
+    var u = policeUnits[i];
+    if (!u.active) continue;
+    var dx = player.x - u.x, dz = player.z - u.z;
+    var dist = Math.hypot(dx, dz);
+    var ang = Math.atan2(dx, dz);
+    u.speed = Math.min(speedBase, u.speed + POLICE_CFG.accel * dt);
+    u.x += Math.sin(ang) * u.speed * dt;
+    u.z += Math.cos(ang) * u.speed * dt;
+    u.x = Math.max(-lim, Math.min(lim, u.x));
+    u.z = Math.max(-lim, Math.min(lim, u.z));
+    u.mesh.position.set(u.x, 0, u.z);
+    u.mesh.rotation.y = ang;
+    if (dist < POLICE_CFG.catchDistance) return 'caught';
+  }
+  return null;
+}
+
+function updatePlayer(dt) {
+  var car = currentCar();
+  var accel = keys['w'] ? PHYSICS.accelForward * car.speed :
+              keys['s'] ? -PHYSICS.accelReverse * car.speed : 0;
+  player.speed += accel * dt;
+  player.speed *= PHYSICS.friction;
+  var maxSpeed = PHYSICS.maxSpeedBase * car.speed;
+  player.speed = Math.max(PHYSICS.minSpeed, Math.min(maxSpeed, player.speed));
+
+  var steer = (keys['a'] ? 1 : 0) - (keys['d'] ? 1 : 0);
+  var speedFactor = Math.min(1, Math.abs(player.speed) / 45);
+  var turnRate = PHYSICS.turnRateBase * car.handling * speedFactor * (player.speed < 0 ? -1 : 1);
+  player.heading += steer * turnRate * dt;
+
+  var handbrake = keys['shift'];
+  var targetDrift = handbrake && Math.abs(steer) > 0 ? steer * PHYSICS.driftRate : 0;
+  var lerpSpeed = handbrake ? PHYSICS.driftLerpSlow : PHYSICS.driftLerpFast;
+  player.drift += (targetDrift - player.drift) * lerpSpeed * dt;
+
+  var velAngle = player.heading + player.drift;
+  player.x += Math.sin(velAngle) * player.speed * dt;
+  player.z += Math.cos(velAngle) * player.speed * dt;
+
+  var lim = WORLD / 2 - 4;
+  player.x = Math.max(-lim, Math.min(lim, player.x));
+  player.z = Math.max(-lim, Math.min(lim, player.z));
+
+  player.mesh.position.set(player.x, 0, player.z);
+  player.mesh.rotation.y = player.heading + player.drift * 0.5;
+
+  if (Math.abs(player.speed) > ECONOMY.minSpeedForMoney) {
+    player.money += Math.abs(player.speed) * dt * ECONOMY.moneyPerSpeedUnit;
+  }
+  player.survivalTime += dt;
+}
+
+function checkObstacleCollision() {
+  for (var i = 0; i < obstacles.length; i++) {
+    var o = obstacles[i];
+    var dx = player.x - o.x, dz = player.z - o.z;
+    if (Math.hypot(dx, dz) < o.r) return o.type || 'obstacle';
+  }
+  return null;
+}
+
+function updateCamera(camera) {
+  var height = CAMERA_CFG.groundDist * Math.tan(CAMERA_CFG.elevationDeg * Math.PI / 180);
+  var cornerAngle = player.heading + CAMERA_CFG.cornerDeg * Math.PI / 180;
+  var camX = player.x - Math.sin(cornerAngle) * CAMERA_CFG.groundDist;
+  var camZ = player.z - Math.cos(cornerAngle) * CAMERA_CFG.groundDist;
+  camera.position.lerp(new THREE.Vector3(camX, height, camZ), CAMERA_CFG.lerpFactor);
+  camera.lookAt(player.x, 0.5, player.z);
+}
+
+// ---------- UI ----------
+var ui = {};
+
+function initUI() {
+  ui = {
+    spd: document.getElementById('spd'),
+    money: document.getElementById('money'),
+    total: document.getElementById('total'),
+    stars: document.getElementById('stars'),
+    speedBar: document.getElementById('speedBar'),
+    overlay: document.getElementById('overlay'),
+    overlayTitle: document.getElementById('overlayTitle'),
+    garage: document.getElementById('garage'),
+    btnPlay: document.getElementById('btnPlay'),
+    btnLeaderboard: document.getElementById('btnLeaderboard'),
+    btnChests: document.getElementById('btnChests'),
+    leaderboard: document.getElementById('leaderboard'),
+    chestPanel: document.getElementById('chestPanel'),
+    gameOverStats: document.getElementById('gameOverStats')
+  };
+}
+
+function renderGarage() {
+  var g = ui.garage;
+  g.innerHTML = '';
+  CARS.forEach(function(car, i) {
+    var owned = save.owned.includes(i);
+    var row = document.createElement('div');
+    row.className = 'car-row' + (save.active === i ? ' sel' : '');
+    var statsText = 'Vel: ' + (car.speed * 100).toFixed(0) + '% | Manejo: ' + (car.handling * 100).toFixed(0) + '%';
+    row.innerHTML = '<div class="car-info"><span><b>' + car.name + '</b> <span class="rarity r-' + car.rarity + '">' + RARITY_LABEL[car.rarity] + '</span></span><div class="car-stats">' + statsText + '</div></div><span>' + (owned ? (save.active === i ? '✅ Equipado' : 'Seleccionar') : '💰 ' + car.price) + '</span>';
+    row.onclick = function() {
+      if (owned) save.active = i;
+      else if (save.totalMoney >= car.price) {
+        save.totalMoney -= car.price; save.owned.push(i); save.active = i;
+      }
+      saveGame(); renderGarage(); updateHud(0, 0);
+    };
+    g.appendChild(row);
+  });
+  var info = document.createElement('div');
+  info.style.cssText = 'text-align:center;margin-top:10px;color:#8a8fb8;font-size:12px;';
+  info.textContent = '💰 Disponible: ' + save.totalMoney + '   ·   Récord: ' + save.best + ' pts   ·   Partidas: ' + save.gamesPlayed;
+  g.appendChild(info);
+}
+
+function showMainMenu() {
+  ui.overlayTitle.textContent = 'TURBO 3D';
+  ui.garage.style.display = 'block';
+  ui.leaderboard.style.display = 'none';
+  ui.chestPanel.style.display = 'none';
+  ui.gameOverStats.style.display = 'none';
+  ui.gameOverStats.classList.remove('show');
+  ui.btnPlay.textContent = '▶ Jugar';
+  ui.btnPlay.style.display = 'inline-block';
+  ui.overlay.classList.add('show');
+}
+
+function showGameOver(stats) {
+  ui.overlayTitle.textContent = '¡ATRAPADO!';
+  ui.garage.style.display = 'none';
+  ui.leaderboard.style.display = 'none';
+  ui.chestPanel.style.display = 'none';
+  ui.gameOverStats.style.display = 'block';
+  ui.gameOverStats.classList.add('show');
+  ui.gameOverStats.innerHTML = '<div class="score-display">💰 ' + stats.score + '</div><div class="stat-row"><span class="stat-label">Tiempo</span><span class="stat-value">' + stats.survivalTime.toFixed(1) + 's</span></div><div class="stat-row"><span class="stat-label">Máx. Velocidad</span><span class="stat-value">' + stats.maxSpeed.toFixed(0) + ' km/h</span></div><div class="stat-row"><span class="stat-label">Nivel Wanted</span><span class="stat-value">' + stats.wantedLevel + ' ★</span></div>';
+  ui.btnPlay.textContent = '↻ Reintentar';
+  ui.btnPlay.style.display = 'inline-block';
+  ui.overlay.classList.add('show');
+}
+
+function updateHud(speed, money) {
+  var kmh = Math.round(Math.abs(speed) * 9);
+  ui.spd.textContent = kmh;
+  ui.money.textContent = Math.floor(money);
+  ui.total.textContent = save.totalMoney;
+  ui.speedBar.style.width = Math.min(100, (kmh / 200) * 100) + '%';
+}
+
+function updateStars(level) {
+  ui.stars.textContent = level > 0 ? '★'.repeat(level) + '☆'.repeat(MAX_POLICE - level) : '';
+}
+
+function renderChestPanel() {
+  var panel = ui.chestPanel;
+  panel.innerHTML = '<h3 style="color:#f4c95d;margin-bottom:10px;">🎁 Cofres</h3>';
+
+  var dailyAvailable = canOpenDailyChest();
+  var dailyTime = getTimeUntilDaily();
+  var dailyDiv = document.createElement('div');
+  dailyDiv.className = 'car-row';
+  dailyDiv.style.cursor = dailyAvailable ? 'pointer' : 'default';
+  dailyDiv.innerHTML = '<span>📅 Cofre Diario</span><span>' + (dailyAvailable ? '¡Abrir!' : dailyTime) + '</span>';
+  if (dailyAvailable) {
+    dailyDiv.onclick = function() {
+      var rewards = openChest('daily');
+      var msg = '¡Cofre Diario abierto!\n' + rewards.map(function(r) { return '+💰 ' + r.amount; }).join('\n');
+      alert(msg);
+      renderChestPanel(); updateHud(0, 0);
+    };
+  }
+  panel.appendChild(dailyDiv);
+
+  var streakAvailable = canOpenStreakChest();
+  var streakDiv = document.createElement('div');
+  streakDiv.className = 'car-row';
+  streakDiv.style.cursor = streakAvailable ? 'pointer' : 'default';
+  streakDiv.innerHTML = '<span>🔥 Cofre de Racha (' + save.chestStreak + '/3)</span><span>' + (streakAvailable ? '¡Abrir!' : (3 - save.chestStreak) + ' más') + '</span>';
+  if (streakAvailable) {
+    streakDiv.onclick = function() {
+      var rewards = openChest('streak');
+      var msg = '¡Cofre de Racha abierto!\n' + rewards.map(function(r) { return '+💰 ' + r.amount; }).join('\n');
+      alert(msg);
+      renderChestPanel(); updateHud(0, 0);
+    };
+  }
+  panel.appendChild(streakDiv);
+
+  var backBtn = document.createElement('button');
+  backBtn.textContent = '← Volver';
+  backBtn.style.marginTop = '10px';
+  backBtn.onclick = showMainMenu;
+  panel.appendChild(backBtn);
+}
+
+function renderLeaderboard() {
+  var lb = ui.leaderboard;
+  lb.innerHTML = '<h3 style="color:#f4c95d;margin-bottom:10px;">🏆 Mejores Puntajes</h3>';
+  var scores = getLeaderboard();
+  if (scores.length === 0) {
+    lb.innerHTML += '<div style="color:#8a8fb8;text-align:center;padding:20px;">Sin partidas registradas aún</div>';
+  } else {
+    scores.forEach(function(entry, i) {
+      var row = document.createElement('div');
+      row.className = 'leaderboard-row' + (i < 3 ? ' top3' : '');
+      var date = new Date(entry.date).toLocaleDateString('es-ES');
+      row.innerHTML = '<span>#' + (i + 1) + ' ' + entry.initials + ' — ' + entry.car + '</span><span>💰 ' + entry.score + ' (' + date + ')</span>';
+      lb.appendChild(row);
+    });
+  }
+  var backBtn = document.createElement('button');
+  backBtn.textContent = '← Volver';
+  backBtn.style.marginTop = '10px';
+  backBtn.onclick = showMainMenu;
+  lb.appendChild(backBtn);
+}
+
+function drawMinimap() {
+  var canvas = document.getElementById('minimap');
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 150, 150);
+  ctx.fillStyle = '#1f2233'; ctx.fillRect(0, 0, 150, 150);
+  var scale = 150 / WORLD;
+  function toMap(x, z) { return [75 + x * scale, 75 + z * scale]; }
+
+  var lakePos = toMap(-140, 120);
+  ctx.fillStyle = '#2f6fb0'; ctx.fillRect(lakePos[0] - 40 * scale, lakePos[1] - 40 * scale, 80 * scale, 80 * scale);
+
+  ctx.fillStyle = '#3a3d4e';
+  ROADS.forEach(function(r) {
+    var rp = toMap(r[2], r[3]);
+    ctx.fillRect(rp[0] - (r[0]/2) * scale, rp[1] - (r[1]/2) * scale, r[0] * scale, r[1] * scale);
+  });
+
+  ctx.fillStyle = '#a8b0c0';
+  obstacles.forEach(function(o) {
+    if (o.type === 'lake') return;
+    var op = toMap(o.x, o.z);
+    ctx.fillRect(op[0] - 2, op[1] - 2, 4, 4);
+  });
+
+  var pp = toMap(player.x, player.z);
+  ctx.fillStyle = '#f4c95d'; ctx.beginPath(); ctx.arc(pp[0], pp[1], 4, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#f4c95d'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(pp[0], pp[1]);
+  ctx.lineTo(pp[0] + Math.sin(player.heading) * 8, pp[1] + Math.cos(player.heading) * 8); ctx.stroke();
+
+  policeUnits.forEach(function(u) {
+    if (!u.active) return;
+    var qp = toMap(u.x, u.z);
+    ctx.fillStyle = '#e6595f'; ctx.beginPath(); ctx.arc(qp[0], qp[1], 3.5, 0, Math.PI * 2); ctx.fill();
+  });
+}
+
+// ---------- ESCENA ----------
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x7fb8e0);
+scene.fog = new THREE.Fog(0x7fb8e0, 60, 380);
+
+var camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
+var renderer = new THREE.WebGLRenderer({ antialias: false });
+
+function sizeRenderer() {
+  renderer.setPixelRatio(1);
+  renderer.setSize(innerWidth, innerHeight, true);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+}
+document.body.appendChild(renderer.domElement);
+sizeRenderer();
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x33361f, 0.9));
+var sun = new THREE.DirectionalLight(0xffffff, 0.8);
+sun.position.set(60, 100, 40); scene.add(sun);
+
+// Mundo
+createWorld(scene);
+
+// Policía
+var policeData = createPolice(scene, 5);
+policeData.forEach(function(p, i) { policeUnits[i] = p; });
+
+// ---------- INICIALIZACIÓN ----------
+initUI();
+initInput();
+
+ui.btnPlay.onclick = function() {
+  startRun(scene);
+  ui.overlay.classList.remove('show');
+};
+
+ui.btnLeaderboard.onclick = function() {
+  ui.garage.style.display = 'none';
+  ui.leaderboard.style.display = 'block';
+  ui.chestPanel.style.display = 'none';
+  ui.gameOverStats.style.display = 'none';
+  ui.gameOverStats.classList.remove('show');
+  ui.btnPlay.style.display = 'none';
+  renderLeaderboard();
+};
+
+ui.btnChests.onclick = function() {
+  ui.garage.style.display = 'none';
+  ui.leaderboard.style.display = 'none';
+  ui.chestPanel.style.display = 'block';
+  ui.gameOverStats.style.display = 'none';
+  ui.gameOverStats.classList.remove('show');
+  ui.btnPlay.style.display = 'none';
+  renderChestPanel();
+};
+
+renderGarage();
+showMainMenu();
+
+// ---------- GAME LOOP ----------
+var lastTime = performance.now();
+var gameOverHandled = false;
+
+function animate() {
+  requestAnimationFrame(animate);
+  var now = performance.now();
+  var dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+
+  if (player.alive) {
+    gameOverHandled = false;
+    updatePlayer(dt);
+    updateWanted(dt);
+    if (updatePolice(dt) === 'caught' || checkObstacleCollision()) {
+      handleGameOver();
+      return;
+    }
+    updateHud(player.speed, player.money);
+    updateStars(wantedLevel);
+  }
+  updateCamera(camera);
+  drawMinimap();
+  renderer.render(scene, camera);
+}
+
+function handleGameOver() {
+  if (gameOverHandled) return;
+  gameOverHandled = true;
+  endRun(function(stats) {
+    saveGame();
+    renderGarage();
+    showGameOver(stats);
+  });
+}
+
+window.addEventListener('resize', sizeRenderer);
+window.addEventListener('keydown', function(e) {
+  if (e.key.toLowerCase() === 'enter' && !player.alive && ui.overlay.classList.contains('show')) {
+    startRun(scene);
+    ui.overlay.classList.remove('show');
+  }
+});
+
+animate();
+</script>
+</body>
+</html>
