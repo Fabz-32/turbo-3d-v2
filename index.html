@@ -8,34 +8,27 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; overflow: hidden; background: #0c0d14; font-family: 'Segoe UI', 'Courier New', monospace; color: #eef0ff; user-select: none; }
 
-  /* HUD mejorado */
   #ui { position: fixed; top: 12px; left: 12px; font-size: 13px; line-height: 1.6; background: rgba(23,26,43,0.9); padding: 12px 16px; border: 1px solid #333a5c; border-radius: 8px; z-index: 100; backdrop-filter: blur(4px); }
   #ui b { color: #f4c95d; }
   #stars { letter-spacing: 3px; color: #e6595f; font-size: 18px; text-shadow: 0 0 8px rgba(230,89,95,0.5); }
 
-  /* Barra de velocidad con color dinámico */
   #speedBarContainer { width: 140px; height: 8px; background: #1a1c2b; border-radius: 4px; margin-top: 6px; overflow: hidden; border: 1px solid #333a5c; }
   #speedBar { width: 0%; height: 100%; border-radius: 4px; transition: width 0.08s linear, background 0.3s ease; }
 
-  /* Indicador de drift */
   #driftIndicator { position: fixed; top: 12px; left: 180px; font-size: 24px; opacity: 0; transition: opacity 0.2s; z-index: 100; }
   #driftIndicator.active { opacity: 1; animation: driftPulse 0.3s infinite alternate; }
   @keyframes driftPulse { from { transform: scale(1); } to { transform: scale(1.2); } }
 
-  /* Minimapa */
   #minimap { position: fixed; top: 12px; right: 12px; border: 2px solid #333a5c; border-radius: 8px; background: rgba(12,13,20,0.85); z-index: 100; }
 
-  /* Ayuda */
   #help { position: fixed; bottom: 12px; left: 12px; font-size: 11px; color: #8a8fb8; background: rgba(23,26,43,0.9); padding: 8px 12px; border-radius: 6px; border: 1px solid #333a5c; z-index: 100; }
   #help kbd { background: #0c0d14; border: 1px solid #333a5c; border-radius: 3px; padding: 1px 6px; color: #eef0ff; font-family: inherit; font-size: 10px; }
 
-  /* Overlay */
   #overlay { position: fixed; inset: 0; background: rgba(12,13,20,0.95); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 14px; z-index: 200; overflow-y: auto; padding: 20px; }
   #overlay.show { display: flex; }
   #overlay h2 { color: #f4c95d; font-size: 32px; margin: 0; letter-spacing: 3px; text-shadow: 0 0 20px rgba(244,201,93,0.3); }
   #overlay .subtitle { color: #8a8fb8; font-size: 14px; text-align: center; margin-top: -8px; }
 
-  /* Garage */
   #garage { max-width: 520px; width: 90%; max-height: 45vh; overflow-y: auto; }
   #garage::-webkit-scrollbar { width: 6px; }
   #garage::-webkit-scrollbar-track { background: #0c0d14; }
@@ -126,7 +119,6 @@
 // Mapa expandido, farolas, barreras, pasto menos castigo
 // ============================================
 
-// ---------- CONSTANTES ----------
 const SAVE_KEY = 'turbo3d_save_v23';
 const WORLD = 600;
 const MAX_POLICE = 5;
@@ -150,7 +142,7 @@ const PHYSICS = {
   maxSpeedBase: 22,
   minSpeed: -12,
   friction: 0.985,
-  frictionOffRoad: 0.975,   // <-- menos castigo en pasto
+  frictionOffRoad: 0.975,
   turnRateBase: 2.4,
   driftRate: 0.9,
   driftLerpFast: 5.0,
@@ -170,7 +162,6 @@ const POLICE_CFG = {
 
 const ECONOMY = { moneyPerSpeedUnit: 0.9, minSpeedForMoney: 3 };
 
-// Edificios más esparcidos en el mapa grande
 const CITY_BUILDINGS = [
   { x: 120, z: -40, w: 14, h: 18, d: 14, color: 0xc0b8a8 },
   { x: 150, z: -35, w: 16, h: 22, d: 12, color: 0xa8b0c0 },
@@ -182,24 +173,17 @@ const CITY_BUILDINGS = [
   { x: -150, z: 110, w: 14, h: 20, d: 14, color: 0x98a0b0 },
 ];
 
-// Carreteras útiles (cuadrícula principal + conectores)
 const ROADS = [
-  // Horizontales
-  [600, 22, 0, 0],      // eje central
+  [600, 22, 0, 0],
   [600, 18, 0, -160],
   [600, 18, 0, 160],
-  // Verticales
-  [22, 600, 0, 0],      // eje central
+  [22, 600, 0, 0],
   [18, 600, -160, 0],
   [18, 600, 160, 0],
-  // Diagonal corta
   [14, 180, 80, -80],
   [180, 14, -80, 80],
 ];
 
-const RARITY_LABEL = { comun: 'Común', raro: 'Raro', epico: 'Épico', legendario: 'Legendario' };
-
-// ---------- GUARDADO ----------
 function loadSave() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -219,7 +203,6 @@ function saveGame() {
 let save = loadSave();
 function currentCar() { return CARS[save.active]; }
 
-// ---------- COFRES ----------
 const CHEST_STREAK_TARGET = 3;
 const DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
 
@@ -260,7 +243,6 @@ function addToLeaderboard(score, initials) {
 function getLeaderboard() { return save.leaderboard; }
 function incrementGamesPlayed() { save.gamesPlayed++; save.chestStreak++; saveGame(); }
 
-// ---------- MODELOS 3D ----------
 function mat(color) { return new THREE.MeshLambertMaterial({ color: color }); }
 
 function addWheels(group, wheelMat, hw, frontZ, backZ, wy, size) {
@@ -327,7 +309,6 @@ var obstacles = [];
 var roadZones = [];
 
 function createWorld(scene) {
-  // Suelo
   var groundGeo = new THREE.PlaneGeometry(WORLD, WORLD, 20, 20);
   var groundMat = new THREE.MeshLambertMaterial({ color: 0x3a6b46 });
   var ground = new THREE.Mesh(groundGeo, groundMat);
@@ -335,7 +316,6 @@ function createWorld(scene) {
   ground.position.y = -0.05;
   scene.add(ground);
 
-  // Carreteras con bordillos y farolas
   ROADS.forEach(function(r) {
     var road = new THREE.Mesh(
       new THREE.PlaneGeometry(r[0], r[1]),
@@ -345,26 +325,23 @@ function createWorld(scene) {
     road.position.set(r[2], 0.02, r[3]);
     scene.add(road);
 
-    // Bordillos
     var curbColor = 0x666a7a;
-    if (r[0] > r[1]) { // horizontal
+    if (r[0] > r[1]) {
       var curb1 = new THREE.Mesh(new THREE.BoxGeometry(r[0], 0.15, 0.4), new THREE.MeshLambertMaterial({ color: curbColor }));
       curb1.position.set(r[2], 0.08, r[3] - r[1]/2 - 0.2); scene.add(curb1);
       var curb2 = new THREE.Mesh(new THREE.BoxGeometry(r[0], 0.15, 0.4), new THREE.MeshLambertMaterial({ color: curbColor }));
       curb2.position.set(r[2], 0.08, r[3] + r[1]/2 + 0.2); scene.add(curb2);
 
-      // Farolas horizontales (cada 40m)
       for (var fx = -r[0]/2 + 20; fx < r[0]/2; fx += 40) {
         addStreetLight(scene, r[2] + fx, r[3] - r[1]/2 - 1.2);
         addStreetLight(scene, r[2] + fx, r[3] + r[1]/2 + 1.2);
       }
-    } else { // vertical
+    } else {
       var curb1 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, r[1]), new THREE.MeshLambertMaterial({ color: curbColor }));
       curb1.position.set(r[2] - r[0]/2 - 0.2, 0.08, r[3]); scene.add(curb1);
       var curb2 = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, r[1]), new THREE.MeshLambertMaterial({ color: curbColor }));
       curb2.position.set(r[2] + r[0]/2 + 0.2, 0.08, r[3]); scene.add(curb2);
 
-      // Farolas verticales
       for (var fz = -r[1]/2 + 20; fz < r[1]/2; fz += 40) {
         addStreetLight(scene, r[2] - r[0]/2 - 1.2, r[3] + fz);
         addStreetLight(scene, r[2] + r[0]/2 + 1.2, r[3] + fz);
@@ -374,7 +351,6 @@ function createWorld(scene) {
     roadZones.push({ x: r[2], z: r[3], w: r[0] + 2, h: r[1] + 2 });
   });
 
-  // Edificios
   CITY_BUILDINGS.forEach(function(b) {
     var mesh = new THREE.Mesh(
       new THREE.BoxGeometry(b.w, b.h, b.d),
@@ -385,7 +361,6 @@ function createWorld(scene) {
     obstacles.push({ x: b.x, z: b.z, r: Math.max(b.w, b.d) / 2 + 1.2, type: 'building' });
   });
 
-  // Árboles más variados
   var treeColors = [0x2e5a34, 0x3a6b3a, 0x256633, 0x1e4a2a, 0x3d7a40, 0x2a5030];
   for (var i = 0; i < 28; i++) {
     var x, z, attempts = 0;
@@ -409,7 +384,6 @@ function createWorld(scene) {
     obstacles.push({ x: x, z: z, r: leavesS / 2 + 0.5, type: 'tree' });
   }
 
-  // Barreras de contención en los bordes del mundo
   createBarriers(scene);
 }
 
@@ -422,19 +396,15 @@ function isOnRoadStatic(x, z) {
 }
 
 function addStreetLight(scene, x, z) {
-  // Poste
   var pole = new THREE.Mesh(new THREE.BoxGeometry(0.15, 5, 0.15), mat(0x444444));
   pole.position.set(x, 2.5, z);
   scene.add(pole);
-  // Brazo
   var arm = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.1), mat(0x444444));
   arm.position.set(x, 4.8, z);
   scene.add(arm);
-  // Lámpara
   var lamp = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.15, 0.25), mat(0xffffaa));
   lamp.position.set(x, 4.7, z);
   scene.add(lamp);
-  // Luz puntual sutil
   var light = new THREE.PointLight(0xffaa55, 0.4, 18);
   light.position.set(x, 4.3, z);
   scene.add(light);
@@ -446,41 +416,15 @@ function createBarriers(scene) {
   var postMat = mat(0x888888);
   var spacing = 8;
 
-  // Función para crear una valla en un segmento
-  function makeFence(x1, z1, x2, z2) {
-    var dx = x2 - x1, dz = z2 - z1;
-    var len = Math.hypot(dx, dz);
-    var segs = Math.ceil(len / spacing);
-    for (var i = 0; i <= segs; i++) {
-      var t = i / segs;
-      var px = x1 + dx * t;
-      var pz = z1 + dz * t;
-      // Poste
-      var post = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.2, 0.25), postMat);
-      post.position.set(px, 1.1, pz);
-      scene.add(post);
-      // Franja reflectiva
-      var band = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.35), barrierMat);
-      band.position.set(px, 1.4, pz);
-      scene.add(band);
-    }
-    // Cable/barra continua
-    var railGeo = new THREE.BoxGeometry(Math.abs(dx) + 0.2, 0.12, Math.abs(dz) + 0.2);
-    // Simplificación: usar un plano o caja alineada. Para bordes rectos es fácil:
-  }
-
-  // Norte y Sur (largos)
   for (var bx = -lim; bx <= lim; bx += spacing) {
     addBarrierPost(scene, bx, -lim);
     addBarrierPost(scene, bx, lim);
   }
-  // Este y Oeste
   for (var bz = -lim; bz <= lim; bz += spacing) {
     addBarrierPost(scene, -lim, bz);
     addBarrierPost(scene, lim, bz);
   }
 
-  // Rails horizontales
   var railH = 1.6;
   var railMat = mat(0xaaaaaa);
   var railN = new THREE.Mesh(new THREE.BoxGeometry(WORLD, 0.12, 0.12), railMat);
@@ -492,7 +436,6 @@ function createBarriers(scene) {
   var railE = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, WORLD), railMat);
   railE.position.set(lim, railH, 0); scene.add(railE);
 
-  // Segundo rail
   var railH2 = 0.9;
   var railN2 = new THREE.Mesh(new THREE.BoxGeometry(WORLD, 0.12, 0.12), railMat);
   railN2.position.set(0, railH2, -lim); scene.add(railN2);
@@ -503,7 +446,6 @@ function createBarriers(scene) {
   var railE2 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, WORLD), railMat);
   railE2.position.set(lim, railH2, 0); scene.add(railE2);
 
-  // Añadir como obstáculos invisibles para colisiones
   obstacles.push({ x: 0, z: -lim, r: 3, type: 'barrier' });
   obstacles.push({ x: 0, z: lim, r: 3, type: 'barrier' });
   obstacles.push({ x: -lim, z: 0, r: 3, type: 'barrier' });
@@ -530,7 +472,6 @@ function createPolice(scene, count) {
   return units;
 }
 
-// ---------- JUGADOR ----------
 var player = {
   mesh: null, x: 0, z: 60, drift: 0, speed: 0, money: 0,
   alive: false, heading: 0, survivalTime: 0, maxSpeedReached: 0,
@@ -577,7 +518,6 @@ function endRun(onEndCallback) {
   if (onEndCallback) onEndCallback({ score: score, survivalTime: player.survivalTime, maxSpeed: player.maxSpeedReached, wantedLevel: wantedLevel });
 }
 
-// ---------- DETECTAR SI ESTÁ EN CARRETERA ----------
 function isOnRoad(x, z) {
   for (var i = 0; i < roadZones.length; i++) {
     var r = roadZones[i];
@@ -586,7 +526,6 @@ function isOnRoad(x, z) {
   return false;
 }
 
-// ---------- FÍSICA ----------
 function updateWanted(dt) {
   var kmh = Math.abs(player.speed) * 9;
   if (kmh > player.maxSpeedReached) player.maxSpeedReached = kmh;
@@ -728,7 +667,6 @@ function updateCamera(camera) {
   camera.lookAt(player.x, 0.5, player.z);
 }
 
-// ---------- UI ----------
 var ui = {};
 
 function initUI() {
@@ -910,7 +848,6 @@ function drawMinimap() {
     ctx.fillRect(op[0] - sz/2, op[1] - sz/2, sz, sz);
   });
 
-  // Dibujar bordes del mundo
   ctx.strokeStyle = '#cc3333'; ctx.lineWidth = 2;
   ctx.strokeRect(75 - (WORLD/2)*scale, 75 - (WORLD/2)*scale, WORLD*scale, WORLD*scale);
 
@@ -927,7 +864,6 @@ function drawMinimap() {
   });
 }
 
-// ---------- ESCENA ----------
 var scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87CEEB);
 scene.fog = new THREE.Fog(0x87CEEB, 100, 420);
@@ -948,14 +884,11 @@ scene.add(new THREE.HemisphereLight(0xffffff, 0x444433, 0.8));
 var sun = new THREE.DirectionalLight(0xffffff, 0.9);
 sun.position.set(80, 120, 60); scene.add(sun);
 
-// Mundo
 createWorld(scene);
 
-// Policía
 var policeData = createPolice(scene, 5);
 policeData.forEach(function(p, i) { policeUnits[i] = p; });
 
-// ---------- INICIALIZACIÓN ----------
 initUI();
 initInput();
 
@@ -987,7 +920,6 @@ ui.btnChests.onclick = function() {
 renderGarage();
 showMainMenu();
 
-// ---------- GAME LOOP ----------
 var lastTime = performance.now();
 var gameOverHandled = false;
 
